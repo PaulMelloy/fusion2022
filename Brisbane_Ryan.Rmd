@@ -3,10 +3,10 @@ title: "Brisbane polling booths"
 description: |
   Analysis of Brisbane polling booths and thier progressiveness.
 author:
-  - name: Nora Jones 
-    url: https://example.com/norajones
-    affiliation: Spacely Sprockets
-    affiliation_url: https://example.com/spacelysprokets
+  - name: Paul Melloy 
+    url: https://github.com/PaulMelloy/fusion2022
+    affiliation: Fusion party 
+    affiliation_url: https://www.fusionparty.org.au/
 date: "`r Sys.Date()`"
 output: distill::distill_article
 ---
