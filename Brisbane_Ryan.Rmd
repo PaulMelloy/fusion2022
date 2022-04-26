@@ -52,7 +52,7 @@ fppb %>%
   filter(DivisionNm == "RYAN",
          year == 2016) %>%
   group_by(PollingPlace) %>%
-  summarise(voter_turnout = sum(OrdinaryVotes)) %>%
+  summarise(voter_turnout = sum(OrdinaryVotes, na.rm = TRUE)) %>%
   arrange(-voter_turnout)
 ```
 This R package does not have the 2019 election data so we will download it for QLD from the [AE website](https://results.aec.gov.au/24310/Website/HouseDownloadsMenu-24310-Csv.htm.)  
@@ -104,9 +104,10 @@ Which booth had the higher average progressive vote
 fp19_qld %>%
   filter(DivisionNm == "Ryan") %>%
   group_by(PollingPlace) %>%
-  summarise(progresiveness = mean(progresive * OrdinaryVotes, na.rm = TRUE),
+  summarise(progresiveness = sum(progresive * OrdinaryVotes, na.rm = TRUE),
             votes = sum(OrdinaryVotes, na.rm = TRUE)) %>%
   mutate(progresivenessP = progresiveness / votes) %>%
-  arrange(-progresivenessP)
+  arrange(-progresivenessP) %>%
+  print(n = 46)
 ```
 

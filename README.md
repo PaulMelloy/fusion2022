@@ -1,3 +1,6 @@
+---
+output: html_document
+---
 # fusion2022
 Election data analysis to assist Fusion party campaign
 
