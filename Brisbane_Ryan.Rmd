@@ -15,7 +15,9 @@ output: distill::distill_article
 Loading 
 ```{r librarys}
 library(eechidna)
-library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(ggalluvial)
 ```
 
 ## Inspect 2019 two party prefered  
@@ -110,4 +112,34 @@ fp19_qld %>%
   arrange(-progresivenessP) %>%
   print(n = 46)
 ```
+
+
+
+Lets plot the flow of preferences on each counting round.
+
+```{r}
+
+dop_qld_zip <- paste0(tempfile(),".zip")
+download.file(url = "https://results.aec.gov.au/24310/Website/External/HouseDopByPPDownload-24310-QLD.zip",
+              destfile = dop_qld_zip)
+
+dir.create("data/dop_qld")
+
+unzip(zipfile =  dop_qld_zip, exdir = "data/dop_qld")
+
+dop_ryan <- read.csv("data/dop_qld/HouseDopByPPDownload-24310-QLD-RYAN.csv",
+                      skip = 1)
+# polling booths
+unique(dop_ryan$PPNm)
+
+# get custom script
+source("R/plot_preference_flow.R")
+
+plot_preference_flow(dop_ryan,
+                     division = "Ryan",
+                     polling_booth = "The Gap West")
+
+
+```
+
 
