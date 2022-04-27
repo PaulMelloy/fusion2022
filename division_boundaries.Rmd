@@ -1,0 +1,75 @@
+---
+title: "Untitled"
+description: |
+  A new article created using the Distill format.
+author:
+  - name: Paul Melloy 
+    url: https://github.com/PaulMelloy/fusion2022
+    affiliation: Fusion party 
+    affiliation_url: https://www.fusionparty.org.au/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+libraries
+
+```{r}
+library(rgdal)
+library(rworldmap)
+library(sf)
+if(any(installed.packages()[, "Package"] == "landmap") == FALSE) {
+  remotes::install_github("https://github.com/Envirometrix/landmap",dependencies = FALSE)
+}
+
+if(any(installed.packages()[, "Package"] == "plotKML") == FALSE) {
+  remotes::install_github("https://github.com/Envirometrix/plotKML",dependencies = FALSE)
+}
+library(plotKML)
+library(ggplot2)
+library(leaflet)
+```
+
+
+Lets plot the flow of preferences on each counting round.
+
+```{r}
+
+boundaries_zip <- paste0(tempfile(),".zip")
+download.file(url = "https://www.aec.gov.au/Electorates/gis/files/2021-Cwlth_electoral_boundaries_ESRI.zip",
+              destfile = boundaries_zip)
+
+if(dir.exists("shiny/22_electoralboundaries/divisions") == FALSE) {
+  dir.create("shiny/22_electoralboundaries/divisions", recursive = TRUE)
+}
+
+unzip(zipfile =  boundaries_zip, exdir = "shiny/22_electoralboundaries/divisions",overwrite = FALSE)
+
+## import shapefile
+AU_bound <- st_read("shiny/22_electoralboundaries/divisions/2021_ELB_region.shp")
+
+st_geometry_type(AU_bound)
+st_crs(AU_bound)
+```
+
+
+```{r plot_divisions}
+ggplot()+
+  geom_sf(data = AU_bound)+
+  coord_sf()
+```
+
+```{r}
+div_map <- st_transform(filter(AU_bound, Elect_div == "Ryan"), "+proj=longlat +datum=WGS84")
+div_map <- st_zm(div_map, drop = T, what = "ZM")
+cent1 <- st_coordinates(st_centroid(div_map))
+
+leaflet() %>%
+  addTiles()%>%
+  setView(lat = cent1[,"Y"], lng = cent1[,"X"], zoom = 10) %>%
+  addPolygons(data = div_map)
+
+dl_div_fn <- tempfile(pattern = "division",fileext = ".kml")
+st_write(div_map, dsn= dl_div_fn, driver = "KML")
+proj4string(div_map)
+
+```
+
