@@ -143,3 +143,14 @@ plot_preference_flow(dop_ryan,
 ```
 
 
+```{r}
+plot_preference_flow(dop_ryan,
+                     division = "Ryan",
+                     polling_booth = "Toowong")
+```
+
+```{r}
+plot_preference_flow(dop_ryan,
+                     division = "Ryan",
+                     polling_booth = "Bellbowrie")
+```
