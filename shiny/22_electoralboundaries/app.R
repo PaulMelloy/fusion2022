@@ -31,14 +31,14 @@ ui <- fluidPage(
             selectInput(inputId = "division",
                         label = "Division name:",
                         choices = AU_bound$Elect_div,
-                        selected = "Banks")
+                        selected = "Banks"),
+            downloadButton("dl_kml",
+                           "Download as KML")
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
-          leafletOutput("divmap",height = "100vh") ,
-          downloadButton("dl_kml",
-                         "Download as KML")
+          leafletOutput("divmap",height = "100vh") 
           
         )
     )
