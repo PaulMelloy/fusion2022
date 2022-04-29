@@ -31,7 +31,7 @@ ui <- fluidPage(
             selectInput(inputId = "division",
                         label = "Division name:",
                         choices = AU_bound$Elect_div,
-                        selected = "Banks",multiple = TRUE)
+                        selected = "Banks")
         ),
 
         # Show a plot of the generated distribution
@@ -65,21 +65,28 @@ server <- function(input, output) {
   div_map <-
     reactive({
       
-      if(length(input$division) > 1){
-        
-        divmap <- st_combine(filter(AU_bound, Elect_div == input$division))
-        
-        divmap <-
-          st_transform(divmap,
-                       "+proj=longlat +datum=WGS84")
-      }else{
+      # if(length(input$division) > 1){
+      #   
+      #   #divmap <- st_combine(filter(AU_bound, Elect_div %in% input$division))
+      #   divmap <- 
+      #     st_polygonize(
+      #     st_line_merge(
+      #     st_cast(
+      #       filter(AU_bound, Elect_div %in% input$division),
+      #       "MULTILINESTRING")
+      #     ))
+      #   
+      #   divmap <-
+      #     st_transform(divmap,
+      #                  "+proj=longlat +datum=WGS84")
+      # }else{
         divmap <-
           st_transform(filter(AU_bound, Elect_div == input$division),
                        "+proj=longlat +datum=WGS84")
         divmap <-
           st_transform(filter(AU_bound, Elect_div == input$division),
                        "+proj=longlat +datum=WGS84")
-      }
+      #}
       
       st_zm(divmap, drop = T, what = "ZM")
       
@@ -87,7 +94,7 @@ server <- function(input, output) {
   
   centdroid <-
     reactive({
-      cent1 <- st_coordinates(st_centroid(div_map()))
+      cent1 <- st_coordinates(st_centroid(div_map(),of_largest_polygon = TRUE))
     })
   
   observeEvent(input$division, {
