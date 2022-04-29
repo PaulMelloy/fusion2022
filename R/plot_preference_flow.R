@@ -97,8 +97,8 @@ plot_preference_flow <-
         y = pref,
         fill = to
       )) +
-      geom_flow(alpha = 0.2) +
-      geom_stratum(alpha = 0.5) +
+      geom_flow(alpha = 0.2, decreasing = TRUE) +
+      geom_stratum(alpha = 0.5, decreasing = TRUE) +
       scale_fill_manual(values = c(
         "purple",
         "red",
