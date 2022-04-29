@@ -36,7 +36,7 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-          leafletOutput("divmap") ,
+          leafletOutput("divmap",height = "100vh") ,
           downloadButton("dl_kml",
                          "Download as KML")
           
