@@ -20,28 +20,31 @@ AU_bound <- st_read("divisions/2021_ELB_region.shp")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Display 2022 Federal electoral division boundaries"),
-    
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            selectInput(inputId = "division",
-                        label = "Division name:",
-                        choices = AU_bound$Elect_div,
-                        selected = "Banks"),
-            downloadButton("dl_kml",
-                           "Download as KML")
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-          leafletOutput("divmap",height = "100vh") 
-          
-        )
-    )
+  # Application title
+  titlePanel("Display 2022 Federal electoral division boundaries"),
+  
+  navbarPage(
+    title = "Tools",
+    id = "tabValue",
+    tabPanel("Division boundaries", value = "splash_page",
+             h2("Download division boundaries"),
+             # Sidebar with a slider input for number of bins
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput(
+                   inputId = "division",
+                   label = "Division name:",
+                   choices = AU_bound$Elect_div,
+                   selected = "Banks"
+                 ),
+                 downloadButton("dl_kml",
+                                "Download as KML")
+               ),
+               
+               # Show a plot of the generated distribution
+               mainPanel(leafletOutput("divmap", height = "100vh"))
+             ))
+  )
 )
 
 # Define server logic required to draw a histogram
