@@ -8,11 +8,30 @@
 #
 
 library(shiny)
-library(dplyr)
+library(tidyverse)
 library(rgdal)
 library(sf)
 library(leaflet)
 library(htmltools)
+library(eechidna)
+library(ggplot2)
+library(ggalluvial)
+source("R/plot_preference_flow.R")
+
+
+divn <- read.csv("data/current-data-first-prefs-03-03.csv")
+
+find_div_pref_flow_file <- function(type = "HouseDopByPP",name){
+  if(type == "HouseDopByPP"){
+  paste0("data/HouseDopByPPDownload-24310-",
+         unique(divn[divn$DivisionName == name,"State"]),
+         "-",
+         unique(divn[divn$DivisionName == name,"DivisionAb"]),
+         ".csv"
+         )
+    }
+}
+
 
 
 ## import shapefile
@@ -26,7 +45,7 @@ ui <- fluidPage(
   navbarPage(
     title = "Tools",
     id = "tabValue",
-    tabPanel("Division boundaries", value = "splash_page",
+    tabPanel("Division boundaries", value = "map_page",
              h2("Download division boundaries"),
              # Sidebar with a slider input for number of bins
              sidebarLayout(
@@ -43,7 +62,22 @@ ui <- fluidPage(
                
                # Show a plot of the generated distribution
                mainPanel(leafletOutput("divmap", height = "100vh"))
-             ))
+             )),
+    tabPanel("Div Rep stats", value = "div_stats",
+             h2("2019 Summary of division stats for the house of reps"),
+             h3("First preferences for the division"),
+             tableOutput("house_FP_table"),
+             column(width = 4,
+                    p(""),
+                    h3("Number of voters by polling place"),
+                    tableOutput("voters")
+             ),
+             column(width = 8,
+                    uiOutput("booth_dropdown"),
+                    plotOutput("Hrep_pf")
+                    )
+    )
+    
   )
 )
 
@@ -68,6 +102,7 @@ server <- function(input, output) {
   div_map <-
     reactive({
       
+      # Attempt to allow downloading the divisions as a single layer
       # if(length(input$division) > 1){
       #   
       #   #divmap <- st_combine(filter(AU_bound, Elect_div %in% input$division))
@@ -121,10 +156,82 @@ server <- function(input, output) {
   })
   
   
+  ### House of reps first preference data
+  output$house_FP_table <-
+    renderTable({
+      # tab1 <- divn[divn$DivisionName == input$division,]
+      # vote_sum <- sum(tab1$Votes, na.rm = TRUE)
+      # tab1$VotePercent <- paste0(round(tab1$Votes/vote_sum, 4) * 100, " %")
+      # tab1[order(tab1$Votes),c("State", "DivisionName","CandidateSurname", "Votes","VotePercent")]
+      
+      fp19 %>%
+        filter(DivisionNm == casefold(input$division, upper = TRUE)) %>%
+        arrange(-Percent) %>%
+        select("DivisionNm","BallotPosition","PartyNm",
+               "Surname","GivenNm", "Elected", "HistoricElected",
+               "OrdinaryVotes", "Percent")
+      
+    })
+  
+  hrep_pf_dat <- reactive({
+    read.csv(find_div_pref_flow_file(name = input$division),
+             skip = 1)
+  })
   
   
+  
+  
+  ### Voter turnout by polling location
+  output$voters <-
+    renderTable({
+      
+      hrep_pf_dat() %>%
+        filter(CountNum == 0 &
+                 CalculationType == "Preference Count") %>%
+        mutate(progresive =
+                 case_when(
+                   PartyAb == "FACN" ~ 0,
+                   PartyAb == "ALP" ~ 65,
+                   PartyAb == "ON" ~ 20,
+                   PartyAb == "LNP" ~ 45,
+                   PartyAb == "LP" ~ 45,
+                   PartyAb == "UAPP" ~ 25,
+                   PartyAb == "DLP" ~ 50,
+                   PartyAb == "GRN" ~ 80,
+                   PartyAb == "GVIC" ~ 80,
+                   PartyAb == "REAS" ~ 85,
+                   PartyAb == "SAL" ~ 85,
+                   PartyAb == "KAP" ~ 50,
+                   PartyAb == "AJP" ~ 75,
+                   PartyAb == "LDP" ~ 23,
+                   PartyAb == "SPP" ~ 70,
+                   PartyAb == "LAOL" ~ 15,
+                   PartyAb == "AUP" ~ 77,
+                   PartyAb == "AFN" ~ 35,
+                   PartyAb == "SEP" ~ 70,
+                   TRUE ~ NA_real_) * 
+                 CalculationValue) %>%
+        group_by(PPNm) %>%
+        summarise(progresive_score = sum(progresive,
+                                         na.rm = TRUE),
+                  voter_turnout = as.integer(sum(CalculationValue))) %>%
+        mutate(progresive_score = progresive_score/voter_turnout) %>%
+        arrange(-voter_turnout)
+      
+    })
+  
+  output$booth_dropdown <-
+    renderUI({
+      booth_choice <- unique(hrep_pf_dat()$PPNm)
+      selectInput("booth",
+                  "Polling booth", choices = booth_choice)
+    })
 
-    
+  Hrep_pf <- renderPlot({
+    plot_preference_flow(hrep_pf_dat(),
+                         division = input$division,
+                         polling_booth = input$booth)
+  })
   
   
 
