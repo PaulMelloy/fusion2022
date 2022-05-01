@@ -67,14 +67,14 @@ ui <- fluidPage(
              h2("2019 Summary of division stats for the house of reps"),
              h3("First preferences for the division"),
              tableOutput("house_FP_table"),
-             column(width = 4,
+             column(width = 5,
                     p(""),
                     h3("Number of voters by polling place"),
                     tableOutput("voters")
              ),
-             column(width = 8,
+             column(width = 7,
                     uiOutput("booth_dropdown"),
-                    plotOutput("Hrep_pf")
+                    plotOutput("Hrep_pf"),
                     )
     )
     
@@ -227,7 +227,7 @@ server <- function(input, output) {
                   "Polling booth", choices = booth_choice)
     })
 
-  Hrep_pf <- renderPlot({
+  output$Hrep_pf <- renderPlot({
     plot_preference_flow(hrep_pf_dat(),
                          division = input$division,
                          polling_booth = input$booth)
