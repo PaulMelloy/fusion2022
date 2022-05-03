@@ -42,6 +42,7 @@ ui <- fluidPage(
   # Application title
   titlePanel("Display 2022 Federal electoral division boundaries"),
   
+  # Add Nav bar and panels
   navbarPage(
     title = "Tools",
     id = "tabValue",
@@ -84,7 +85,7 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-
+# Render a leaflet map at page loading
   output$divmap <- renderLeaflet({
     
     map1 <-
@@ -101,57 +102,42 @@ server <- function(input, output) {
   
   div_map <-
     reactive({
+      # Project and select selected division
+      divmap <-
+        st_transform(filter(AU_bound, Elect_div == input$division),
+                     "+proj=longlat +datum=WGS84")
       
-      # Attempt to allow downloading the divisions as a single layer
-      # if(length(input$division) > 1){
-      #   
-      #   #divmap <- st_combine(filter(AU_bound, Elect_div %in% input$division))
-      #   divmap <- 
-      #     st_polygonize(
-      #     st_line_merge(
-      #     st_cast(
-      #       filter(AU_bound, Elect_div %in% input$division),
-      #       "MULTILINESTRING")
-      #     ))
-      #   
-      #   divmap <-
-      #     st_transform(divmap,
-      #                  "+proj=longlat +datum=WGS84")
-      # }else{
-        divmap <-
-          st_transform(filter(AU_bound, Elect_div == input$division),
-                       "+proj=longlat +datum=WGS84")
-        divmap <-
-          st_transform(filter(AU_bound, Elect_div == input$division),
-                       "+proj=longlat +datum=WGS84")
-      #}
-      
+      # Drop z dimension to make XY
       st_zm(divmap, drop = T, what = "ZM")
       
     })
   
+  # Get the centroid of the division
   centdroid <-
     reactive({
       cent1 <- st_coordinates(st_centroid(div_map(),of_largest_polygon = TRUE))
     })
   
+  # when division is changed re render the map with the new division
   observeEvent(input$division, {
-    
-    
     output$divmap <-
       renderLeaflet({
         leaflet() %>%
           addTiles() %>%
-          setView(lat = centdroid()[,"Y"], lng = centdroid()[,"X"], zoom = 10) %>%
+          setView(lat = centdroid()[, "Y"],
+                  lng = centdroid()[, "X"],
+                  zoom = 10) %>%
           addPolygons(data = div_map())
       })
     
+    # prep the download button
     output$dl_kml <- downloadHandler(
-      filename = paste0(input$division,".kml"),
-      content = function(con){
-        #dl_div_fn <- tempfile(pattern = "division",fileext = ".kml")
-        st_write(div_map(), dsn= con, driver = "KML")
-      })
+      filename = paste0(input$division, ".kml"),
+      content = function(con) {
+        # write division map as a KML
+        st_write(div_map(), dsn = con, driver = "KML")
+      }
+    )
     
   })
   
@@ -159,20 +145,23 @@ server <- function(input, output) {
   ### House of reps first preference data
   output$house_FP_table <-
     renderTable({
-      # tab1 <- divn[divn$DivisionName == input$division,]
-      # vote_sum <- sum(tab1$Votes, na.rm = TRUE)
-      # tab1$VotePercent <- paste0(round(tab1$Votes/vote_sum, 4) * 100, " %")
-      # tab1[order(tab1$Votes),c("State", "DivisionName","CandidateSurname", "Votes","VotePercent")]
-      
       fp19 %>%
         filter(DivisionNm == casefold(input$division, upper = TRUE)) %>%
         arrange(-Percent) %>%
-        select("DivisionNm","BallotPosition","PartyNm",
-               "Surname","GivenNm", "Elected", "HistoricElected",
-               "OrdinaryVotes", "Percent")
-      
+        select(
+          "DivisionNm",
+          "BallotPosition",
+          "PartyNm",
+          "Surname",
+          "GivenNm",
+          "Elected",
+          "HistoricElected",
+          "OrdinaryVotes",
+          "Percent"
+        )
     })
   
+  # pull in polling booth data from selected division
   hrep_pf_dat <- reactive({
     read.csv(find_div_pref_flow_file(name = input$division),
              skip = 1)
@@ -184,49 +173,55 @@ server <- function(input, output) {
   ### Voter turnout by polling location
   output$voters <-
     renderTable({
-      
       hrep_pf_dat() %>%
         filter(CountNum == 0 &
                  CalculationType == "Preference Count") %>%
-        mutate(progresive =
-                 case_when(
-                   PartyAb == "FACN" ~ 0,
-                   PartyAb == "ALP" ~ 65,
-                   PartyAb == "ON" ~ 20,
-                   PartyAb == "LNP" ~ 45,
-                   PartyAb == "LP" ~ 45,
-                   PartyAb == "UAPP" ~ 25,
-                   PartyAb == "DLP" ~ 50,
-                   PartyAb == "GRN" ~ 80,
-                   PartyAb == "GVIC" ~ 80,
-                   PartyAb == "REAS" ~ 85,
-                   PartyAb == "SAL" ~ 85,
-                   PartyAb == "KAP" ~ 50,
-                   PartyAb == "AJP" ~ 75,
-                   PartyAb == "LDP" ~ 23,
-                   PartyAb == "SPP" ~ 70,
-                   PartyAb == "LAOL" ~ 15,
-                   PartyAb == "AUP" ~ 77,
-                   PartyAb == "AFN" ~ 35,
-                   PartyAb == "SEP" ~ 70,
-                   TRUE ~ NA_real_) * 
-                 CalculationValue) %>%
+        mutate(
+          progresive =
+            case_when(
+              PartyAb == "FACN" ~ 0,
+              PartyAb == "ALP" ~ 65,
+              PartyAb == "ON" ~ 20,
+              PartyAb == "LNP" ~ 45,
+              PartyAb == "LP" ~ 45,
+              PartyAb == "UAPP" ~ 25,
+              PartyAb == "DLP" ~ 50,
+              PartyAb == "GRN" ~ 80,
+              PartyAb == "GVIC" ~ 80,
+              PartyAb == "REAS" ~ 85,
+              PartyAb == "SAL" ~ 85,
+              PartyAb == "KAP" ~ 50,
+              PartyAb == "AJP" ~ 75,
+              PartyAb == "LDP" ~ 23,
+              PartyAb == "SPP" ~ 70,
+              PartyAb == "LAOL" ~ 15,
+              PartyAb == "AUP" ~ 77,
+              PartyAb == "AFN" ~ 35,
+              PartyAb == "SEP" ~ 70,
+              TRUE ~ NA_real_
+            ) *
+            CalculationValue
+        ) %>%
         group_by(PPNm) %>%
-        summarise(progresive_score = sum(progresive,
-                                         na.rm = TRUE),
-                  voter_turnout = as.integer(sum(CalculationValue))) %>%
-        mutate(progresive_score = progresive_score/voter_turnout) %>%
+        summarise(
+          progresive_score = sum(progresive,
+                                 na.rm = TRUE),
+          voter_turnout = as.integer(sum(CalculationValue))
+        ) %>%
+        mutate(progresive_score = progresive_score / voter_turnout) %>%
         arrange(-voter_turnout)
       
     })
   
+  # Render a updated dropdown menu of booth choices
   output$booth_dropdown <-
     renderUI({
       booth_choice <- unique(hrep_pf_dat()$PPNm)
       selectInput("booth",
                   "Polling booth", choices = booth_choice)
     })
-
+  
+  # plot booth preference flows
   output$Hrep_pf <- renderPlot({
     plot_preference_flow(hrep_pf_dat(),
                          division = input$division,
