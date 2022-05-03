@@ -106,7 +106,9 @@ plot_preference_flow <-
         "forestgreen",
         "blue",
         "orange",
-        "yellow"
+        "yellow",
+        "pink",
+        "lightblue"
       )) +
       theme_minimal() +
       ggtitle(paste("Preference flows for", Location))
