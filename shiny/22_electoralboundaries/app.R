@@ -43,6 +43,8 @@ ui <- fluidPage(
   # Application title
   titlePanel("2022 Federal electoral divisions and 2019 election data"),
   p("This app was designed and coded by Dr Paul Melloy for the Fusion party 2022 electral campaign"),
+  a(href="https://github.com/PaulMelloy/fusion2022/tree/main/shiny/22_electoralboundaries",
+    "Find the source code, make a pull request, or lodge an issue on GitHub PaulMelloy/Fusion2022"),
   # Add Nav bar and panels
   navbarPage(
     title = "Tools",
@@ -87,9 +89,10 @@ ui <- fluidPage(
              h2("Obtain polling location data by state"),
              selectInput(inputId = "state",
                          label = "State",
-                         choices = unique(divn$State))
+                         choices = unique(divn$State)),
+             tableOutput("state_voters")
              ),
-    tableOutput("state_voters")
+    
     
   )
 )
@@ -244,12 +247,11 @@ server <- function(input, output) {
   
   state_polls <- reactive({
     
-    div_files <- list.files("data/")
     
     state_divs_list <- 
-      lapply(list.files("shiny/22_electoralboundaries/data/", pattern = input$state),
+      lapply(list.files("data/", pattern = input$state),
              function(x){
-               read.csv(x,row.names = FALSE)
+               read.csv(paste0("data/",x),skip = 1)
              })
     do.call("rbind", state_divs_list)
     
