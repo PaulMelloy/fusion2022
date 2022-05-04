@@ -16,6 +16,7 @@ library(htmltools)
 library(eechidna)
 library(ggplot2)
 library(ggalluvial)
+library(data.table)
 source("R/plot_preference_flow.R")
 
 
@@ -40,14 +41,16 @@ AU_bound <- st_read("divisions/2021_ELB_region.shp")
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   # Application title
-  titlePanel("Display 2022 Federal electoral division boundaries"),
-  
+  titlePanel("2022 Federal electoral divisions and 2019 election data"),
+  p("This app was designed and coded by Dr Paul Melloy for the Fusion party 2022 electral campaign"),
   # Add Nav bar and panels
   navbarPage(
     title = "Tools",
     id = "tabValue",
     tabPanel("Division boundaries", value = "map_page",
              h2("Download division boundaries"),
+             p("1. Select the federal electoral division of interest"),
+             p("2. Click on the other tabs to view more detail about the selected division"),
              # Sidebar with a slider input for number of bins
              sidebarLayout(
                sidebarPanel(
@@ -64,10 +67,11 @@ ui <- fluidPage(
                # Show a plot of the generated distribution
                mainPanel(leafletOutput("divmap", height = "100vh"))
              )),
-    tabPanel("Div Rep stats", value = "div_stats",
+    tabPanel("Divison lower house stats", value = "div_stats",
              h2("2019 Summary of division stats for the house of reps"),
              h3("First preferences for the division"),
              tableOutput("house_FP_table"),
+             p("Use the drop down menu to select a 2019 polling booth for more specific information"),
              column(width = 5,
                     p(""),
                     h3("Number of voters by polling place"),
@@ -76,8 +80,16 @@ ui <- fluidPage(
              column(width = 7,
                     uiOutput("booth_dropdown"),
                     plotOutput("Hrep_pf"),
-                    )
-    )
+                    ),
+             p("Note: polling booths include prepolling (PPVC) and mail votes")
+    ),
+    tabPanel("State wide stats", value = "state_stats",
+             h2("Obtain polling location data by state"),
+             selectInput(inputId = "state",
+                         label = "State",
+                         choices = unique(divn$State))
+             ),
+    tableOutput("state_voters")
     
   )
 )
@@ -228,6 +240,63 @@ server <- function(input, output) {
                          polling_booth = input$booth)
   })
   
+  # Tab 3
+  
+  state_polls <- reactive({
+    
+    div_files <- list.files("data/")
+    
+    state_divs_list <- 
+      lapply(list.files("shiny/22_electoralboundaries/data/", pattern = input$state),
+             function(x){
+               read.csv(x,row.names = FALSE)
+             })
+    do.call("rbind", state_divs_list)
+    
+  })
+  
+  ### Voter turnout by polling location in state
+  output$state_voters <-
+    renderTable({
+      state_polls() %>%
+        filter(CountNum == 0 &
+                 CalculationType == "Preference Count") %>%
+        mutate(
+          progresive =
+            case_when(
+              PartyAb == "FACN" ~ 0,
+              PartyAb == "ALP" ~ 65,
+              PartyAb == "ON" ~ 20,
+              PartyAb == "LNP" ~ 45,
+              PartyAb == "LP" ~ 45,
+              PartyAb == "UAPP" ~ 25,
+              PartyAb == "DLP" ~ 50,
+              PartyAb == "GRN" ~ 80,
+              PartyAb == "GVIC" ~ 80,
+              PartyAb == "REAS" ~ 85,
+              PartyAb == "SAL" ~ 85,
+              PartyAb == "KAP" ~ 50,
+              PartyAb == "AJP" ~ 75,
+              PartyAb == "LDP" ~ 23,
+              PartyAb == "SPP" ~ 70,
+              PartyAb == "LAOL" ~ 15,
+              PartyAb == "AUP" ~ 77,
+              PartyAb == "AFN" ~ 35,
+              PartyAb == "SEP" ~ 70,
+              TRUE ~ NA_real_
+            ) *
+            CalculationValue
+        ) %>%
+        group_by(PPNm) %>%
+        summarise(
+          progresive_score = sum(progresive,
+                                 na.rm = TRUE),
+          voter_turnout = as.integer(sum(CalculationValue))
+        ) %>%
+        mutate(progresive_score = progresive_score / voter_turnout) %>%
+        arrange(-voter_turnout)
+      
+    })
   
 
  }
