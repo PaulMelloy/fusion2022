@@ -27,6 +27,7 @@ partycolours <- partydeets$colour
 names(partycolours) <- partydeets$RegisteredPartyAb
 senate_div <- read.csv("data/SenateFirstPrefsByDivisionByVoteTypeDownload-24310.csv", skip = 1)
 senate_state <- read.csv("data/SenateFirstPrefsByStateByVoteTypeDownload-24310.csv", skip = 1)
+booth_estimates <- read.csv("data/BoothVotesEst20220521.csv")
 
 find_div_pref_flow_file <- function(type = "HouseDopByPP",name){
   if(type == "HouseDopByPP"){
@@ -108,7 +109,16 @@ ui <- fluidPage(
     tabPanel("Senate/Division", value = "div_senate",
              h2(textOutput("senate_div_head")),
              p("Change the division in the 'Dividion boundaries' tab"),
-             DTOutput("div_senate"))
+             DTOutput("div_senate")),
+    tabPanel("Booth Voter Turnout", value = "booth",
+             h2("AEC voter turnout to booths and locations"),
+             p("Click the row in the table to update the map and show the location of the booth"),
+             selectInput(inputId = "state_booth",
+                         label = "State",
+                         choices = unique(booth_estimates$StateAb)), 
+             DTOutput("booth_tab"),
+             leafletOutput("booths_loc")
+             )
     
     
   )
@@ -363,6 +373,61 @@ server <- function(input, output) {
   output$senate_div_head <- renderText({
     paste0("First preference votes for Senators by party in the division of ",input$division)
   })
+  
+  
+  booth_table <- reactive({data.table(booth_estimates)[StateAb == input$state_booth]})
+  
+  output$booth_tab <- renderDT({
+    datatable(booth_table())
+    
+  })
+   
+  observeEvent(input$state_booth, {
+    output$booths_loc <-
+      renderLeaflet({
+        leaflet() %>%
+          addTiles() %>%
+          setView(lat = as.numeric(booth_table()[2,"Lat"]),
+                  lng = as.numeric(booth_table()[2,"Long"]),
+                  zoom = 7) #%>%
+          # addMarkers(lng = as.numeric(booth_table()[!is.na(Long),Long]),
+          #            lat = as.numeric(booth_table()[!is.na(Lat),Lat]))
+      })
+    
+  })####################
+    
+  awesome <- makeAwesomeIcon(
+    icon = "info",
+    iconColor = "black",
+    markerColor = "purple",
+    library = "fa"
+  )
+  
+  
+    observeEvent(input$booth_tab_rows_selected, {
+      
+        leafletProxy("booths_loc") %>%
+            setView(lat = last(as.numeric(booth_table()[input$booth_tab_rows_selected,Lat])),
+                    lng = last(as.numeric(booth_table()[input$booth_tab_rows_selected,Long])),
+                    zoom = 15) %>%
+           addAwesomeMarkers(lat = as.numeric(booth_table()[input$booth_tab_rows_selected,Lat]),
+                             lng = as.numeric(booth_table()[input$booth_tab_rows_selected,Long]),
+                             icon = awesome,
+                             popup = as.character(booth_table()[input$booth_tab_rows_selected,PremisesName]),
+                             label = as.character(booth_table()[input$booth_tab_rows_selected,PremisesName]))
+                      
+        })
+
+    
+    # prep the download button
+    output$dl_kml <- downloadHandler(
+      filename = paste0(input$division, ".kml"),
+      content = function(con) {
+        # write division map as a KML
+        st_write(div_map(), dsn = con, driver = "KML")
+      }
+    )
+
   
 
  }
