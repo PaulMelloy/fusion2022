@@ -16,11 +16,17 @@ library(htmltools)
 library(eechidna)
 library(ggplot2)
 library(ggalluvial)
+library(DT)
 library(data.table)
 source("R/plot_preference_flow.R")
 
 
 divn <- read.csv("data/current-data-first-prefs-03-03.csv")
+partydeets <- read.csv("data/PartyDetailsDownload.csv", skip = 1)
+partycolours <- partydeets$colour
+names(partycolours) <- partydeets$RegisteredPartyAb
+senate_div <- read.csv("data/SenateFirstPrefsByDivisionByVoteTypeDownload-24310.csv", skip = 1)
+senate_state <- read.csv("data/SenateFirstPrefsByStateByVoteTypeDownload-24310.csv", skip = 1)
 
 find_div_pref_flow_file <- function(type = "HouseDopByPP",name){
   if(type == "HouseDopByPP"){
@@ -42,7 +48,7 @@ AU_bound <- st_read("divisions/2021_ELB_region.shp")
 ui <- fluidPage(
   # Application title
   titlePanel("2022 Federal electoral divisions and 2019 election data"),
-  p("This app was designed and coded by Dr Paul Melloy for the Fusion party 2022 electral campaign"),
+  p("This app was designed and coded by Dr Paul Melloy for the Fusion party 2022 electoral campaign"),
   a(href="https://github.com/PaulMelloy/fusion2022/tree/main/shiny/22_electoralboundaries",
     "Find the source code, make a pull request, or lodge an issue on GitHub PaulMelloy/Fusion2022"),
   # Add Nav bar and panels
@@ -77,6 +83,7 @@ ui <- fluidPage(
              column(width = 5,
                     p(""),
                     h3("Number of voters by polling place"),
+                    checkboxInput("ppvc1", "Include PPVC", value = FALSE),
                     tableOutput("voters")
              ),
              column(width = 7,
@@ -86,12 +93,22 @@ ui <- fluidPage(
              p("Note: polling booths include prepolling (PPVC) and mail votes")
     ),
     tabPanel("State wide stats", value = "state_stats",
-             h2("Obtain polling location data by state"),
-             selectInput(inputId = "state",
-                         label = "State",
-                         choices = unique(divn$State)),
-             tableOutput("state_voters")
+             column(width = 4,
+                    h2("Obtain polling location data by state"),
+                    selectInput(inputId = "state",
+                                label = "State",
+                                choices = unique(divn$State)), 
+                    checkboxInput("ppvc", "Include PPVC", value = FALSE),
+                    tableOutput("state_voters")),
+             column(width = 6,
+                    h3(textOutput(outputId = "senate_state_head")),
+                    p("Sort table by clicking the arrows at the top of the table"),
+                    DTOutput("state_senate"))
              ),
+    tabPanel("Senate/Division", value = "div_senate",
+             h2(textOutput("senate_div_head")),
+             p("Change the division in the 'Dividion boundaries' tab"),
+             DTOutput("div_senate"))
     
     
   )
@@ -191,6 +208,10 @@ server <- function(input, output) {
       hrep_pf_dat() %>%
         filter(CountNum == 0 &
                  CalculationType == "Preference Count") %>%
+        filter(if (isFALSE(input$ppvc1)) {
+          !(grepl("PPVC", PPNm))}else{
+            rep(TRUE,n())
+          })%>%
         mutate(
           progresive =
             case_when(
@@ -240,7 +261,8 @@ server <- function(input, output) {
   output$Hrep_pf <- renderPlot({
     plot_preference_flow(hrep_pf_dat(),
                          division = input$division,
-                         polling_booth = input$booth)
+                         polling_booth = input$booth,
+                         PartyColour = partydeets)
   })
   
   # Tab 3
@@ -263,6 +285,11 @@ server <- function(input, output) {
       state_polls() %>%
         filter(CountNum == 0 &
                  CalculationType == "Preference Count") %>%
+        filter(if (isFALSE(input$ppvc)) {
+          !(grepl("PPVC", PPNm))
+        } else{
+          rep(TRUE, n())
+        }) %>% 
         mutate(
           progresive =
             case_when(
@@ -275,7 +302,7 @@ server <- function(input, output) {
               PartyAb == "DLP" ~ 50,
               PartyAb == "GRN" ~ 80,
               PartyAb == "GVIC" ~ 80,
-              PartyAb == "REAS" ~ 85,
+              PartyAb == "REAS" ~ 75,
               PartyAb == "SAL" ~ 85,
               PartyAb == "KAP" ~ 50,
               PartyAb == "AJP" ~ 75,
@@ -299,6 +326,43 @@ server <- function(input, output) {
         arrange(-voter_turnout)
       
     })
+  
+  output$state_senate<- renderDT({
+    datatable(data.table(senate_state)[StateAb == input$state,
+                             list(state = unique(StateAb),
+                                   OrdinaryVotes = sum(OrdinaryVotes),
+                                   AbsentVotes = sum(AbsentVotes),
+                                   ProvisionalVotes = sum(ProvisionalVotes),
+                                   PrePollVotes = sum(PrePollVotes),
+                                   PostalVotes = sum(PostalVotes),
+                                   TotalVotes = sum(TotalVotes)),
+                                   by = PartyName],
+              rownames = FALSE)
+  })
+  
+  output$senate_state_head <- renderText({
+    paste0("First preference votes for Senators by party in the state of ",input$state)
+    })
+  
+  
+  output$div_senate <- renderDT({
+    datatable(data.table(senate_div)[DivisionNm == input$division,
+                                       list(Senators_elected = sum(Elected == "Y"),
+                                            Senators_HistoricElected = sum(HistoricElected == "Y"),
+                                            OrdinaryVotes = sum(OrdinaryVotes),
+                                            AbsentVotes = sum(AbsentVotes),
+                                            ProvisionalVotes = sum(ProvisionalVotes),
+                                            PrePollVotes = sum(PrePollVotes),
+                                            PostalVotes = sum(PostalVotes),
+                                            TotalVotes = sum(TotalVotes)),
+                                       by = PartyName],
+              rownames = FALSE)
+    
+  })
+  
+  output$senate_div_head <- renderText({
+    paste0("First preference votes for Senators by party in the division of ",input$division)
+  })
   
 
  }
