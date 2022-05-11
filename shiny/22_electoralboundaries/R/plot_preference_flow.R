@@ -1,7 +1,8 @@
 plot_preference_flow <-
   function(dat,
            division = "Ryan",
-           polling_booth = "The Gap") {
+           polling_booth = "The Gap",
+           PartyColour = NULL) {
     
     # Acknowledgment to https://stackoverflow.com/questions/64511383/showing-flows-for-ggalluvium
     
@@ -51,6 +52,28 @@ plot_preference_flow <-
       }
     }
     
+    if (is.null(PartyColour)) {
+      PC_V <- c(
+        "purple",
+        "red",
+        "black",
+        "forestgreen",
+        "blue",
+        "orange",
+        "yellow",
+        "pink",
+        "lightblue"
+      )
+    }else{
+      PartyColour <- unique(PartyColour[PartyColour$PartyAb %in% dat$PartyAb,c("PartyAb","colour")])
+      PC_V <- PartyColour$colour
+      names(PC_V) <- PartyColour$PartyAb
+      
+    }
+    
+    
+      
+    
     dop_ryan %>%
       # First: Convert count to a numeric. Add a "to" variable for second
       # party preference or the party where votes are transferred to. This variable
@@ -99,17 +122,9 @@ plot_preference_flow <-
       )) +
       geom_flow(alpha = 0.2, decreasing = TRUE) +
       geom_stratum(alpha = 0.5, decreasing = TRUE) +
-      scale_fill_manual(values = c(
-        "purple",
-        "red",
-        "black",
-        "forestgreen",
-        "blue",
-        "orange",
-        "yellow",
-        "pink",
-        "lightblue"
-      )) +
+      scale_fill_manual(values = PC_V,
+                        name = "Party",
+                        ) +
       theme_minimal() +
       ggtitle(paste("Preference flows for", Location))
   }
