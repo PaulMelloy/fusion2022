@@ -386,20 +386,16 @@ server <- function(input, output) {
                                                          VoteEst <= input$est_voters[2],
                                                        ]})
   
+  # render AEC 2022 estimated voter turnout here
   output$booth_tab <- renderDT({
     datatable(booth_table())
     
   })
   
+  # use a proxy table to allow selecting and deselecting rows
   booth_proxy <- dataTableProxy("booth_tab")
   
-  # listen <- reactive({
-  #   list(input$state_booth,
-  #        input$booth_sel,
-  #        input$booth_tab_rows_selected)
-  # })
-  
-
+  # do selecting and deselecting all rows here
   observeEvent(input$booth_sel |input$est_voters,{
     if(isTRUE(input$booth_sel)){
       selectRows(booth_proxy,input$booth_tab_rows_all)
@@ -426,13 +422,13 @@ server <- function(input, output) {
           addTiles() %>%
           setView(lat = as.numeric(booth_table()[2,"Lat"]),
                   lng = as.numeric(booth_table()[2,"Long"]),
-                  zoom = 7) #%>%
-          # addMarkers(lng = as.numeric(booth_table()[!is.na(Long),Long]),
-          #            lat = as.numeric(booth_table()[!is.na(Lat),Lat]))
+                  zoom = 7) 
       })
     
-  })####################
+  })
     
+  # Make icons to put on map
+  #  Default markers were not being show
   awesome <- makeAwesomeIcon(
     icon = "info",
     iconColor = "black",
@@ -441,8 +437,10 @@ server <- function(input, output) {
   )
   
   
+  # update map with selected rows
   observeEvent(input$booth_tab_rows_selected, {
     
+    # layerid must be the same length as the number of elements in marker layer
     Lid <- input$booth_tab_rows_selected
     
     leafletProxy("booths_loc") %>%
@@ -461,25 +459,7 @@ server <- function(input, output) {
         layerId = Lid
       )
       
-    
-    # output$booths_loc <-
-    #   renderLeaflet({
-    #     leaflet() %>%
-    #       addTiles() %>%
-    #       setView(
-    #         lat = mean(as.numeric(booth_table()[input$booth_tab_rows_selected, Lat]), na.rm = TRUE),
-    #         lng = mean(as.numeric(booth_table()[input$booth_tab_rows_selected, Long]), na.rm = TRUE),
-    #         zoom = 11
-    #       ) %>%
-    #       addAwesomeMarkers(
-    #         lat = as.numeric(booth_table()[input$booth_tab_rows_selected, Lat]),
-    #         lng = as.numeric(booth_table()[input$booth_tab_rows_selected, Long]),
-    #         icon = awesome,
-    #         popup = as.character(booth_table()[input$booth_tab_rows_selected, PremisesName]),
-    #         label = as.character(booth_table()[input$booth_tab_rows_selected, PremisesName])
-    #       )
-        
-     # })
+  
   })
   
     # prep the download button
