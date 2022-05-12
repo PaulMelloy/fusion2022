@@ -116,6 +116,12 @@ ui <- fluidPage(
              selectInput(inputId = "state_booth",
                          label = "State",
                          choices = unique(booth_estimates$StateAb)), 
+             sliderInput(inputId = "est_voters", 
+                         label = "Filter table by number of estimated voters",
+                         min = 0,
+                         max = 6300,
+                         value = c(2500,3500)),
+             checkboxInput("booth_sel","Select all rows"),
              DTOutput("booth_tab"),
              leafletOutput("booths_loc")
              )
@@ -375,11 +381,42 @@ server <- function(input, output) {
   })
   
   
-  booth_table <- reactive({data.table(booth_estimates)[StateAb == input$state_booth]})
+  booth_table <- reactive({data.table(booth_estimates)[StateAb == input$state_booth &
+                                                         VoteEst >= input$est_voters[1] &
+                                                         VoteEst <= input$est_voters[2],
+                                                       ]})
   
   output$booth_tab <- renderDT({
     datatable(booth_table())
     
+  })
+  
+  booth_proxy <- dataTableProxy("booth_tab")
+  
+  # listen <- reactive({
+  #   list(input$state_booth,
+  #        input$booth_sel,
+  #        input$booth_tab_rows_selected)
+  # })
+  
+
+  observeEvent(input$booth_sel |input$est_voters,{
+    if(isTRUE(input$booth_sel)){
+      selectRows(booth_proxy,input$booth_tab_rows_all)
+    }else{
+      selectRows(booth_proxy,vector(mode = "numeric"))
+      output$booths_loc <-
+        renderLeaflet({
+          leaflet() %>%
+            addTiles() %>%
+            setView(
+              lat = as.numeric(booth_table()[2, "Lat"]),
+              lng = as.numeric(booth_table()[2, "Long"]),
+              zoom = 7
+            )
+        })
+      
+    }
   })
    
   observeEvent(input$state_booth, {
@@ -404,21 +441,47 @@ server <- function(input, output) {
   )
   
   
-    observeEvent(input$booth_tab_rows_selected, {
-      
-        leafletProxy("booths_loc") %>%
-            setView(lat = last(as.numeric(booth_table()[input$booth_tab_rows_selected,Lat])),
-                    lng = last(as.numeric(booth_table()[input$booth_tab_rows_selected,Long])),
-                    zoom = 15) %>%
-           addAwesomeMarkers(lat = as.numeric(booth_table()[input$booth_tab_rows_selected,Lat]),
-                             lng = as.numeric(booth_table()[input$booth_tab_rows_selected,Long]),
-                             icon = awesome,
-                             popup = as.character(booth_table()[input$booth_tab_rows_selected,PremisesName]),
-                             label = as.character(booth_table()[input$booth_tab_rows_selected,PremisesName]))
-                      
-        })
-
+  observeEvent(input$booth_tab_rows_selected, {
     
+    Lid <- input$booth_tab_rows_selected
+    
+    leafletProxy("booths_loc") %>%
+      setView(
+        lat = mean(as.numeric(booth_table()[input$booth_tab_rows_selected, Lat]), na.rm = TRUE),
+        lng = mean(as.numeric(booth_table()[input$booth_tab_rows_selected, Long]), na.rm = TRUE),
+        zoom = 11
+      ) %>%
+      clearMarkers()%>%
+      addAwesomeMarkers(
+        lat = as.numeric(booth_table()[input$booth_tab_rows_selected, Lat]),
+        lng = as.numeric(booth_table()[input$booth_tab_rows_selected, Long]),
+        icon = awesome,
+        popup = as.character(booth_table()[input$booth_tab_rows_selected, PremisesName]),
+        label = as.character(booth_table()[input$booth_tab_rows_selected, PremisesName]),
+        layerId = Lid
+      )
+      
+    
+    # output$booths_loc <-
+    #   renderLeaflet({
+    #     leaflet() %>%
+    #       addTiles() %>%
+    #       setView(
+    #         lat = mean(as.numeric(booth_table()[input$booth_tab_rows_selected, Lat]), na.rm = TRUE),
+    #         lng = mean(as.numeric(booth_table()[input$booth_tab_rows_selected, Long]), na.rm = TRUE),
+    #         zoom = 11
+    #       ) %>%
+    #       addAwesomeMarkers(
+    #         lat = as.numeric(booth_table()[input$booth_tab_rows_selected, Lat]),
+    #         lng = as.numeric(booth_table()[input$booth_tab_rows_selected, Long]),
+    #         icon = awesome,
+    #         popup = as.character(booth_table()[input$booth_tab_rows_selected, PremisesName]),
+    #         label = as.character(booth_table()[input$booth_tab_rows_selected, PremisesName])
+    #       )
+        
+     # })
+  })
+  
     # prep the download button
     output$dl_kml <- downloadHandler(
       filename = paste0(input$division, ".kml"),
