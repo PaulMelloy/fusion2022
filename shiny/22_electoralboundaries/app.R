@@ -52,6 +52,9 @@ ui <- fluidPage(
   p("This app was designed and coded by Dr Paul Melloy for the Fusion party 2022 electoral campaign"),
   a(href="https://github.com/PaulMelloy/fusion2022/tree/main/shiny/22_electoralboundaries",
     "Find the source code, make a pull request, or lodge an issue on GitHub PaulMelloy/Fusion2022"),
+  p(),
+  a(href= "https://docs.google.com/forms/d/e/1FAIpQLScRWT2HZfFhExOrEpm79NisSK2rTL39VpknkCqpNujs8iOMwg/viewform?usp=sf_link",
+    "Help me estimate party progressiveness by filling out this survey!!!!"),
   # Add Nav bar and panels
   navbarPage(
     title = "Tools",
