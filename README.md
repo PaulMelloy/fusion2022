@@ -4,6 +4,16 @@ output: html_document
 # fusion2022
 Election data analysis to assist Fusion party campaign
 
+## Shiny app
+See the deployed shiny app at (https://paulmelloy.shinyapps.io/22_electoralboundaries/)
+
+Or run it locally with the following code which will require downloading data from the
+[AEC website](https://results.aec.gov.au/24310/Website/HouseDownloadsMenu-24310-Csv.htm) into the `/data` folder
+```r
+shiny::runGitHub("PaulMelloy/fusion2022", subdir = "shiny/22_electoralboundaries")
+```
+
+
 The following is an example of analyses  
 
 ## Load libraries  

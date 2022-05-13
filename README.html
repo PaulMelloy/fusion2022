@@ -254,6 +254,7 @@ if (window.hljs) {
 
 
 
+
 <style type="text/css">
 .main-container {
   max-width: 940px;
@@ -274,6 +275,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -364,7 +368,15 @@ pre code {
 <div id="fusion2022" class="section level1">
 <h1>fusion2022</h1>
 <p>Election data analysis to assist Fusion party campaign</p>
+<div id="shiny-app" class="section level2">
+<h2>Shiny app</h2>
+<p>See the deployed shiny app at (<a href="https://paulmelloy.shinyapps.io/22_electoralboundaries/" class="uri">https://paulmelloy.shinyapps.io/22_electoralboundaries/</a>)</p>
+<p>Or run it locally with the following code which will require
+downloading data from the <a href="https://results.aec.gov.au/24310/Website/HouseDownloadsMenu-24310-Csv.htm">AEC
+website</a> into the <code>/data</code> folder</p>
+<pre class="r"><code>shiny::runGitHub(&quot;PaulMelloy/fusion2022&quot;, subdir = &quot;shiny/22_electoralboundaries&quot;)</code></pre>
 <p>The following is an example of analyses</p>
+</div>
 <div id="load-libraries" class="section level2">
 <h2>Load libraries</h2>
 <p>Loading libraries</p>
@@ -389,14 +401,17 @@ library(dplyr)</code></pre>
 <p>Peek at the data</p>
 <pre class="r"><code>fppb &lt;- firstpref_pollingbooth_download()
 head(fppb)</code></pre>
-<p>Which polling booth in the Ryan division had the highest voter turnout in 2016</p>
+<p>Which polling booth in the Ryan division had the highest voter
+turnout in 2016</p>
 <pre class="r"><code>fppb %&gt;%
   filter(DivisionNm == &quot;RYAN&quot;,
          year == 2016) %&gt;%
   group_by(PollingPlace) %&gt;%
   summarise(voter_turnout = sum(OrdinaryVotes)) %&gt;%
   arrange(-voter_turnout)</code></pre>
-<p>This R package does not have the 2019 election data so we will download it for QLD from the <a href="https://results.aec.gov.au/24310/Website/HouseDownloadsMenu-24310-Csv.htm.">AEC website</a></p>
+<p>This R package does not have the 2019 election data so we will
+download it for QLD from the <a href="https://results.aec.gov.au/24310/Website/HouseDownloadsMenu-24310-Csv.htm.">AEC
+website</a></p>
 <pre class="r"><code>fp19_qld &lt;- read.csv(&quot;https://results.aec.gov.au/24310/Website/Downloads/HouseStateFirstPrefsByPollingPlaceDownload-24310-QLD.csv&quot;,skip = 1)
 
 head(fp19_qld)</code></pre>
@@ -427,7 +442,8 @@ head(fp19_qld)</code></pre>
              PartyAb == &quot;AFN&quot; ~ 35,
              PartyAb == &quot;SEP&quot; ~ 70,
              TRUE ~ NA_real_))</code></pre>
-<p>Which booths in the division of <em>Ryan</em> had the higher average progressive vote</p>
+<p>Which booths in the division of <em>Ryan</em> had the higher average
+progressive vote</p>
 <pre class="{r}"><code>fp19_qld %&gt;%
   filter(DivisionNm == &quot;Ryan&quot;) %&gt;%
   group_by(PollingPlace) %&gt;%
